@@ -1,0 +1,123 @@
+---
+title: "Bacterial growth"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(magrittr)
+library(dplyr)
+library(purrr)
+```
+
+A reparameterisation of the Gamma distribution:
+
+```{r}
+dgamma2 <- function(n, mean, sd) {
+  rate <- mean / sd^2
+  dgamma(n, mean * rate, rate)
+}
+```
+
+and
+
+```{r}
+rgamma2 <- function(n, mean, sd, nb = 1) {
+  rate <- mean / sd^2
+  rgamma(n, nb * mean * rate, rate)
+}
+```
+
+Let's test it:
+
+```{r}
+mu <- 5
+sigma <- 1
+
+out <- replicate(1000, {
+  a <- rgamma2(100, 5, 1)
+  c(mean(a), sd(a))
+})
+
+hist(out[1, ])
+hist(out[2, ])
+```
+
+Works OK. Let's look at the sum:
+
+```{r}
+nb <- 10 # number of Gamma distribution we want to sum
+
+out1 <- replicate(1000, {
+  a <- colSums(matrix(rgamma2(100 * nb, 5, 1), nb))
+  c(mean(a), sd(a))
+})
+
+out2 <- replicate(1000, {
+  a <- rgamma2(100, 5, 1, nb)
+  c(mean(a), sd(a))
+})
+
+plot(sort(out1[1, ]), sort(out2[1, ]))
+abline(0, 1)
+plot(sort(out1[2, ]), sort(out2[2, ]))
+abline(0, 1)
+```
+
+Works OK. Here is the distribution of the between-division times:
+
+```{r}
+mu <- 20
+sd <- 1
+hist(rgamma2(1000, mu, sd), xlim = c(0, 30))
+```
+
+```{r}
+tmax <- 5 * 60 # in minutes
+mu <- 20
+sd <- 1
+
+n_gen <- tmax / mu
+out <- map(1:n_gen, ~ rgamma2(2^(.x - 1), mu, sd, .x))
+out <- c(0, sort(unlist(out)))
+data.frame(time = out, n = 1:length(out)) %>% 
+  filter(time < tmax - mu) %$% 
+  plot(time / 60, n, type = "o", xlab = "time (hours)",
+       ylab = "number of bacteria", col = "blue")
+```
+
+Let's make a function:
+
+```{r}
+f <- function(mu, sd, tmax) {
+  opar <- par(mfrow = c(1, 2))
+
+  xs <- seq(0, 35, le = 500)
+  plot(xs, dgamma2(xs, mu, sd), type = "l", lwd = 2, col = "red", ylim = c(0, .5),
+       xlab = "between-division time (minutes)", ylab = "density of probability")
+  
+  n_gen <- tmax / mu
+  out <- map(1:n_gen, ~ rgamma2(2^(.x - 1), mu, sd, .x))
+  out <- c(0, sort(unlist(out)))
+  data.frame(time = out, n = 1:length(out)) %>% 
+    filter(time < tmax - mu) %$% 
+    plot(time / 60, n, type = "o", xlab = "time (hours)",
+         ylab = "number of bacteria", col = "blue")
+  par(opar)
+}
+```
+
+And use it to explore the effect of the variance on the between-division time on
+the look of the bacterial growth curve:
+
+```{r}
+f(20, 1, 5 * 60)
+f(20, 2, 5 * 60)
+f(20, 3, 5 * 60)
+```
+
