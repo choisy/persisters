@@ -7,3 +7,20 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+### Parameters
+
+$S$: initial size of the population of susceptible bacteria
+
+$p$: initial proportion of persisters in the initial population of susceptible
+bacteria
+
+### State variables
+
+$G$: growing susceptible bacteria
+$P$: dormant susceptible bacteria
+$R$: resistant bacteria
+
+
+$$
+\frac{dG}{dt} = (r - kA) S
+$$
